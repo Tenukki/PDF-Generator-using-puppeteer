@@ -8,17 +8,23 @@ const cors = require('cors')
 const app = express()
 const bodyParser = require('body-parser')
 
-/*
- Tämä koodi testien jälkeen näyttää toimivan. pupeteer avaa uuden chromen. kun chrome on avannut tiedoston html. Säädä
- domia manuaalisesti javascriptillä passaamalla tiedot domiin. Tiedot poistuvat koska chrome avataan aina uudelleen jolloinka 
- tiedosto avautuu uudelleen ja domi on pyyhkiytynyt pois
-*/
 app.use(bodyParser.json())
 app.use(cors())
 
-let data = {
+
+let browser
+const alusta = async() => {
+  try {
+    browser = await Puppeteer.launch()
+  } catch (error) {
+    console.log(error)
+  }
 
 }
+
+
+
+let data = {}
 
 app.get('/api/pdf', (req, res) => {
   const polku = path.join(process.cwd(),"second.pdf")
@@ -40,6 +46,7 @@ app.get('/dowload/:file', (req, res) => {
 })
 
 app.post('/api/pdf', async(req,res) => {
+  console.time();
   const body = req.body
   console.log(body)
   if(body === undefined){
@@ -51,49 +58,29 @@ app.post('/api/pdf', async(req,res) => {
       email: body.email,
       text: body.text
   }
-  console.log(data)
-  await hmtl()
+  await hmtl(data)
   res.status(200).json({status: 200})
+  console.timeEnd();
 })
 
-const randomWord = () => {
-
-  const lorem = new LoremIpsum();
-
-  let sana = lorem.generateWords(80)
-  console.log(sana.length)
-  return sana
-}
-
-const compile = async (filename,data) =>{
-  const filepath = path.join(process.cwd(),`${filename}.hbs`)
-  const html = await fs.readFile(filepath,"utf-8")
-  //const css = await fs.readFile(path.join(process.cwd(),"testi.css"), "utf-8")
-  return hbs.compile(html)(data)
-}
-
-
-const hmtl = async() => {
+const hmtl = async(reveived) => {
   try {
-    const browser = await Puppeteer.launch()
+    await alusta()
     const page = await browser.newPage()
-
-    //Palautetaan string muotoinen html koodi ja koodin syötetty data
-    const content = await compile("htmltemplate",data)
-    console.log(content)
-
-    //otetaan string muotinen html data ja tehdän siitä uusi tiedosto
-    //!!!HUOM Tässä pitää tulevaisuudeessa luoda uusi väliaikainen html tiedosto
-    //Koska jos moni käyttäjä koskee samaan tiedostoon. Menetvät käskyt päälekkäin
-    await fs.writeFile("updatedHmtlTemplate.html",content,(error) => {
-      error ? console.log(error) : console.log("file was written")
-    })
     
-    //asetetaan headless chromelle string muotinen html
-    //await page.setContent(content)
     await page.goto(process.cwd()+"/updatedHmtlTemplate.html", {
       waitUntil: "networkidle2"
     })
+
+    await page.evaluate((reveived) => {
+      document.getElementById('a1').value = reveived.name
+      document.getElementById('a2').value = reveived.id
+      document.getElementById('a3').value = reveived.email
+      document.getElementById('a4').value = reveived.text
+      let hmtlbody = document.body.innerHTML
+      console.log(hmtlbody)
+    },reveived);
+
     //loppu renderöidään
     await page.pdf({
       path: "second.pdf",
@@ -102,7 +89,7 @@ const hmtl = async() => {
       printBackground: true
     })
     console.log("done")
-    await browser.close()
+    
 
   } catch (error) {
     console.log(error)
