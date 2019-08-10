@@ -33,7 +33,9 @@ app.get('/dowload/:file', (req, res) => {
   let file = req.params.file
   let filelocation = path.join(process.cwd(),"second.pdf")
   console.log(filelocation)
-  res.download(filelocation,file)
+  //new.pdf tilalle voidaan asettaa palautettavan tiedoston nimi
+  //hakee tiedoston polusta ja palauttaa sen responsessa jonka front end lataa window.open()
+  res.download(filelocation,"new.pdf")
     
 })
 
@@ -81,6 +83,8 @@ const hmtl = async() => {
     console.log(content)
 
     //otetaan string muotinen html data ja tehdän siitä uusi tiedosto
+    //!!!HUOM Tässä pitää tulevaisuudeessa luoda uusi väliaikainen html tiedosto
+    //Koska jos moni käyttäjä koskee samaan tiedostoon. Menetvät käskyt päälekkäin
     await fs.writeFile("updatedHmtlTemplate.html",content,(error) => {
       error ? console.log(error) : console.log("file was written")
     })
@@ -99,6 +103,7 @@ const hmtl = async() => {
     })
     console.log("done")
     await browser.close()
+
   } catch (error) {
     console.log(error)
   }
